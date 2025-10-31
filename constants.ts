@@ -3,8 +3,7 @@
 declare global {
   interface ImportMeta {
     readonly env: {
-      readonly VITE_GOOGLE_API_KEY?: string;
-      readonly VITE_GOOGLE_CLIENT_ID?: string;
+      // You can define other environment variables here if needed in the future
     };
   }
 }
@@ -30,17 +29,4 @@ export const COVERAGE_TYPES = [
   "تقرير إخباري"
 ];
 
-export const TARGET_EMAIL = 'malkiya.cs@gmail.com';
-export const WHATSAPP_NUMBERS = ['97333551841'];
-
-// --- ملاحظة هامة للمطور ---
-// لإرسال البريد الإلكتروني، يجب عليك إعداد "متغيرات البيئة" (Environment Variables)
-// في خدمة الاستضافة الخاصة بك (مثل Vercel أو Netlify).
-// قم بإضافة المتغيرات التالية في إعدادات مشروعك على منصة الاستضافة:
-// VITE_GOOGLE_API_KEY = [المفتاح الخاص بك هنا]
-// VITE_GOOGLE_CLIENT_ID = [معرف العميل الخاص بك هنا]
-//
-// لا تضع المفاتيح الحقيقية مباشرة في هذا الملف لحماية حسابك.
-// Vite يتطلب أن تبدأ أسماء المتغيرات بـ `VITE_` لتكون متاحة في التطبيق.
-export const GOOGLE_API_KEY = import.meta.env?.VITE_GOOGLE_API_KEY ?? '';
-export const GOOGLE_CLIENT_ID = import.meta.env?.VITE_GOOGLE_CLIENT_ID ?? '';
+export const WHATSAPP_NUMBERS = ['97333551841']; // Add more numbers here if needed

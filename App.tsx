@@ -1,29 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { FormData } from './types';
-import { COMMITTEE_NAMES, COVERAGE_TYPES, WHATSAPP_NUMBERS, TARGET_EMAIL, GOOGLE_API_KEY, GOOGLE_CLIENT_ID } from './constants';
+import { COMMITTEE_NAMES, COVERAGE_TYPES, WHATSAPP_NUMBERS } from './constants';
 import Header from './components/Header';
 import SuccessNotification from './components/SuccessNotification';
-import SubmissionChoiceModal from './components/SubmissionChoiceModal';
-
-declare global {
-    interface Window {
-        gapi: any;
-    }
-}
-
-const blobToBase64 = (blob: Blob): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = (reader.result as string).split(',')[1];
-      resolve(base64String);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-};
 
 const App: React.FC = () => {
   const initialState: FormData = {
@@ -43,44 +24,6 @@ const App: React.FC = () => {
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [showChoiceModal, setShowChoiceModal] = useState(false);
-  const [isGapiReady, setIsGapiReady] = useState(false);
-
-  useEffect(() => {
-    if (!GOOGLE_API_KEY || !GOOGLE_CLIENT_ID) {
-        console.warn("Google API keys are missing. Email functionality will be disabled.");
-        return;
-    }
-
-    const script = document.createElement('script');
-    script.src = "https://apis.google.com/js/api.js";
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-        window.gapi.load('client:auth2', () => {
-            window.gapi.client.init({
-                apiKey: GOOGLE_API_KEY,
-                clientId: GOOGLE_CLIENT_ID,
-                scope: 'https://www.googleapis.com/auth/gmail.send',
-                discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest'],
-            }).then(
-                () => setIsGapiReady(true),
-                (error: any) => console.error('Error initializing GAPI client', error)
-            );
-        });
-    };
-    script.onerror = () => {
-        console.error('Failed to load Google API script.');
-    };
-    document.body.appendChild(script);
-
-    return () => {
-        const scriptElement = document.querySelector('script[src="https://apis.google.com/js/api.js"]');
-        if (scriptElement) {
-            document.body.removeChild(scriptElement);
-        }
-    };
-}, []);
 
   const validate = useCallback(() => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
@@ -113,7 +56,7 @@ const App: React.FC = () => {
     });
   };
 
-  const formatMessage = (): string => {
+  const formatWhatsappMessage = (): string => {
     return `
 طلب تغطية إعلامية جديد 📝
 ----------------------------------
@@ -123,22 +66,15 @@ const App: React.FC = () => {
 ----------------------------------
 *اسم الفعالية:* ${formData.eventName}
 *التاريخ:* ${formData.eventDate}
-*الوقت:* من ${formData.startTime} إلى ${formData.endTime}
-*المكان:* ${formData.eventLocation}
 ----------------------------------
-*نوع التغطية المطلوبة:*
-- ${formData.coverageTypes.join('\n- ')}
-----------------------------------
-*ملاحظات إضافية:*
-${formData.additionalNotes || 'لا يوجد'}
+*ملاحظة:* تفاصيل الطلب الكاملة موجودة في ملف PDF المرفق.
 `;
   };
 
   const generatePdfBlob = async (): Promise<Blob> => {
     const reportElement = document.getElementById('pdf-content');
-
     if (!reportElement) {
-      throw new Error("PDF generation resources not found!");
+      throw new Error("Could not find element to generate PDF from.");
     }
 
     const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true });
@@ -146,23 +82,27 @@ ${formData.additionalNotes || 'لا يوجد'}
     const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
-    const canvasWidth = canvas.width;
-    const canvasHeight = canvas.height;
-    const ratio = canvasWidth / canvasHeight;
-    const imgWidth = pdfWidth - 20;
+    const ratio = canvas.width / canvas.height;
+    const imgWidth = pdfWidth - 20; // with margin
     const imgHeight = imgWidth / ratio;
-    let finalHeight = imgHeight > pdfHeight - 20 ? pdfHeight - 20 : imgHeight;
-    pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, finalHeight);
+    
+    pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
     return pdf.output('blob');
   };
 
-  const handleWhatsappSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!validate()) {
+      return;
+    }
+    
     setIsLoading(true);
-    setShowChoiceModal(false);
 
     try {
+      // 1. Generate PDF from the hidden div
       const pdfBlob = await generatePdfBlob();
       
+      // 2. Create a download link and trigger the download for the user
       const pdfUrl = URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = pdfUrl;
@@ -172,113 +112,22 @@ ${formData.additionalNotes || 'لا يوجد'}
       window.URL.revokeObjectURL(pdfUrl);
       a.remove();
       
-      const message = formatMessage();
+      // 3. Prepare WhatsApp message and open link
+      const message = formatWhatsappMessage();
       const encodedMessage = encodeURIComponent(message);
       
-      WHATSAPP_NUMBERS.forEach(number => {
-        const whatsappLink = `https://wa.me/${number}?text=${encodedMessage}`;
-        window.open(whatsappLink, '_blank');
-      });
+      // Open link for the first number to avoid multiple popups
+      const whatsappLink = `https://wa.me/${WHATSAPP_NUMBERS[0]}?text=${encodedMessage}`;
+      window.open(whatsappLink, '_blank');
 
+      // 4. Show success notification
       setIsSubmitted(true);
     } catch (error) {
-      console.error("Error during WhatsApp submit process:", error);
-      alert("حدث خطأ أثناء إنشاء ملف PDF أو إرسال الطلب عبر واتساب. يرجى المحاولة مرة أخرى.");
+      console.error("Error during submit process:", error);
+      alert("حدث خطأ أثناء إنشاء ملف PDF. يرجى المحاولة مرة أخرى.");
     } finally {
       setIsLoading(false);
     }
-  };
-  
-  const handleEmailSubmit = async () => {
-    if (!GOOGLE_CLIENT_ID || !GOOGLE_API_KEY) {
-      alert('ميزة إرسال البريد الإلكتروني معطلة حاليًا. يرجى من مسؤول النظام تكوين متغيرات Google API في خدمة الاستضافة.');
-      return;
-    }
-    if (!isGapiReady) {
-        alert('خدمة البريد الإلكتروني لا تزال قيد التحميل. يرجى الانتظار لحظة ثم المحاولة مرة أخرى.');
-        return;
-    }
-    
-    setIsLoading(true);
-    setShowChoiceModal(false);
-
-    try {
-      const authInstance = window.gapi.auth2.getAuthInstance();
-      if (!authInstance.isSignedIn.get()) {
-        await authInstance.signIn();
-      }
-
-      const pdfBlob = await generatePdfBlob();
-      const pdfBase64 = await blobToBase64(pdfBlob);
-      const fileName = `طلب_تغطية_${formData.eventName || 'فعالية'}.pdf`;
-      
-      const subject = `طلب تغطية إعلامية: ${formData.eventName}`;
-      const emailBody = `السلام عليكم ورحمة الله وبركاته،
-
-تحية طيبة وبعد،
-
-تجدون في المرفقات تفاصيل طلب تغطية إعلامية لفعالية: "${formData.eventName}".
-
-مع خالص الشكر والتقدير،
-${formData.committeeName} - ${formData.applicantName}`;
-
-      const boundary = 'boundary_boundary';
-      const rawMessage = [
-        `To: ${TARGET_EMAIL}`,
-        `Subject: =?utf-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`,
-        'Content-Type: multipart/mixed; boundary="' + boundary + '"',
-        '',
-        '--' + boundary,
-        'Content-Type: text/plain; charset="UTF-8"',
-        '',
-        emailBody,
-        '',
-        '--' + boundary,
-        `Content-Type: application/pdf; name="${fileName}"`,
-        `Content-Disposition: attachment; filename="${fileName}"`,
-        'Content-Transfer-Encoding: base64',
-        '',
-        pdfBase64,
-        '',
-        '--' + boundary + '--'
-      ].join('\r\n');
-
-      await window.gapi.client.gmail.users.messages.send({
-        userId: 'me',
-        resource: {
-          raw: btoa(rawMessage).replace(/\+/g, '-').replace(/\//g, '_')
-        }
-      });
-      
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      const a = document.createElement('a');
-      a.href = pdfUrl;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(pdfUrl);
-      a.remove();
-      
-      setIsSubmitted(true);
-
-    } catch (error: any) {
-      console.error("Error during Email submit process:", error);
-      if (error.error === 'popup_closed_by_user') {
-        alert("تم إلغاء عملية تسجيل الدخول. لم يتم إرسال البريد الإلكتروني.");
-      } else {
-        alert("حدث خطأ أثناء إرسال البريد الإلكتروني. يرجى المحاولة مرة أخرى والتأكد من السماح بالنوافذ المنبثقة.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!validate()) {
-      return;
-    }
-    setShowChoiceModal(true);
   };
   
   const resetForm = () => {
@@ -288,7 +137,7 @@ ${formData.committeeName} - ${formData.applicantName}`;
 
   return (
     <div className="bg-green-50 min-h-screen text-gray-800">
-      <div id="pdf-content" dir="rtl" className="a4-sheet" style={{ position: 'absolute', left: '-9999px', width: '210mm', minHeight:'297mm', boxSizing:'border-box' }}>
+      <div id="pdf-content" dir="rtl" className="a4-sheet" style={{ position: 'absolute', left: '-9999px', width: '210mm', minHeight:'297mm', boxSizing:'border-box', overflow:'hidden' }}>
          <div className="p-8 bg-white" style={{fontFamily: "'Tajawal', sans-serif", direction: 'rtl'}}>
             <header className="flex justify-between items-center border-b-2 pb-4 border-gray-200">
                 <div>
@@ -338,12 +187,6 @@ ${formData.committeeName} - ${formData.applicantName}`;
       </div>
 
       {isSubmitted && <SuccessNotification onClose={resetForm} />}
-      <SubmissionChoiceModal 
-        isOpen={showChoiceModal}
-        onClose={() => setShowChoiceModal(false)}
-        onSelectWhatsapp={handleWhatsappSubmit}
-        onSelectEmail={handleEmailSubmit}
-      />
       <Header />
       <main className="container mx-auto p-4 md:p-8">
         <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-10">
@@ -422,22 +265,22 @@ ${formData.committeeName} - ${formData.applicantName}`;
                 <button 
                   type="submit" 
                   disabled={isLoading}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-gray-400 transition-transform transform hover:scale-105"
+                  className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-gray-400 transition-transform transform hover:scale-105"
                 >
                   {isLoading ? (
                     <>
-                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      <span>جاري الإرسال...</span>
+                      <span>جاري الإنشاء والإرسال...</span>
                     </>
                   ) : (
                     <>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.886-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.371-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01s-.521.074-.792.372c-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
                       </svg>
-                      <span>إرسال الطلب وتنزيل نسخة</span>
+                      <span>إرسال عبر واتساب وتنزيل نسخة</span>
                     </>
                   )}
                 </button>
