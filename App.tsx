@@ -1,4 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { FormData } from './types';
 import { COMMITTEE_NAMES, COVERAGE_TYPES, WHATSAPP_NUMBERS, TARGET_EMAIL, GOOGLE_API_KEY, GOOGLE_CLIENT_ID } from './constants';
 import Header from './components/Header';
@@ -7,8 +9,6 @@ import SubmissionChoiceModal from './components/SubmissionChoiceModal';
 
 declare global {
     interface Window {
-        jspdf: any;
-        html2canvas: any;
         gapi: any;
     }
 }
@@ -44,6 +44,43 @@ const App: React.FC = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showChoiceModal, setShowChoiceModal] = useState(false);
+  const [isGapiReady, setIsGapiReady] = useState(false);
+
+  useEffect(() => {
+    if (!GOOGLE_API_KEY || !GOOGLE_CLIENT_ID) {
+        console.warn("Google API keys are missing. Email functionality will be disabled.");
+        return;
+    }
+
+    const script = document.createElement('script');
+    script.src = "https://apis.google.com/js/api.js";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+        window.gapi.load('client:auth2', () => {
+            window.gapi.client.init({
+                apiKey: GOOGLE_API_KEY,
+                clientId: GOOGLE_CLIENT_ID,
+                scope: 'https://www.googleapis.com/auth/gmail.send',
+                discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest'],
+            }).then(
+                () => setIsGapiReady(true),
+                (error: any) => console.error('Error initializing GAPI client', error)
+            );
+        });
+    };
+    script.onerror = () => {
+        console.error('Failed to load Google API script.');
+    };
+    document.body.appendChild(script);
+
+    return () => {
+        const scriptElement = document.querySelector('script[src="https://apis.google.com/js/api.js"]');
+        if (scriptElement) {
+            document.body.removeChild(scriptElement);
+        }
+    };
+}, []);
 
   const validate = useCallback(() => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
@@ -98,14 +135,13 @@ ${formData.additionalNotes || 'لا يوجد'}
   };
 
   const generatePdfBlob = async (): Promise<Blob> => {
-    const { jsPDF } = window.jspdf;
     const reportElement = document.getElementById('pdf-content');
 
-    if (!reportElement || !window.html2canvas) {
+    if (!reportElement) {
       throw new Error("PDF generation resources not found!");
     }
 
-    const canvas = await window.html2canvas(reportElement, { scale: 2, useCORS: true });
+    const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true });
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
     const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -158,22 +194,15 @@ ${formData.additionalNotes || 'لا يوجد'}
       alert('ميزة إرسال البريد الإلكتروني معطلة حاليًا. يرجى من مسؤول النظام تكوين متغيرات Google API في خدمة الاستضافة.');
       return;
     }
+    if (!isGapiReady) {
+        alert('خدمة البريد الإلكتروني لا تزال قيد التحميل. يرجى الانتظار لحظة ثم المحاولة مرة أخرى.');
+        return;
+    }
     
     setIsLoading(true);
     setShowChoiceModal(false);
 
     try {
-      await new Promise<void>((resolve, reject) => {
-        window.gapi.load('client:auth2', () => {
-          window.gapi.client.init({
-            apiKey: GOOGLE_API_KEY,
-            clientId: GOOGLE_CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/gmail.send',
-            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest'],
-          }).then(resolve, reject);
-        });
-      });
-
       const authInstance = window.gapi.auth2.getAuthInstance();
       if (!authInstance.isSignedIn.get()) {
         await authInstance.signIn();
@@ -397,7 +426,7 @@ ${formData.committeeName} - ${formData.applicantName}`;
                 >
                   {isLoading ? (
                     <>
-                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
