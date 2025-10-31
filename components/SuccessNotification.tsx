@@ -14,18 +14,18 @@ const SuccessNotification: React.FC<SuccessNotificationProps> = ({ onClose }) =>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
           </svg>
         </div>
-        <h3 className="text-2xl font-bold text-gray-800 mb-2">تم الإرسال بنجاح!</h3>
-        <p className="text-gray-600 text-lg">
-          شكرًا لتعاونكم مع اللجنة الإعلامية 🌸
+        <h3 className="text-2xl font-bold text-gray-800 mb-2">تم إنشاء الطلب بنجاح!</h3>
+        <p className="text-gray-600 text-lg mb-4">
+          تم تنزيل نسخة PDF من طلبك على جهازك.
         </p>
-        <p className="text-gray-500 mt-4 text-sm">
-          سيتم التواصل معكم قريبًا لتأكيد التغطية.
+        <p className="text-gray-500 mt-4 text-sm bg-yellow-100 p-3 rounded-lg">
+          سيتم الآن فتح واتساب، يرجى <strong className="font-bold">إرفاق الملف الذي تم تنزيله</strong> لإكمال عملية الإرسال.
         </p>
         <button
           onClick={onClose}
           className="mt-8 w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 transition-transform transform hover:scale-105"
         >
-          إغلاق
+          حسنًا، فهمت
         </button>
       </div>
     </div>
