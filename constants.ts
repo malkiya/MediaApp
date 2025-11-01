@@ -26,7 +26,8 @@ export const COVERAGE_TYPES = [
   "تصوير فيديو",
   "منشور إنستغرام",
   "بث مباشر",
-  "تقرير إخباري"
+  "تقرير إخباري",
+  "عمل تصميم"
 ];
 
 export const WHATSAPP_NUMBERS = ['97333551841']; // Add more numbers here if needed
