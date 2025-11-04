@@ -138,7 +138,11 @@ const App: React.FC = () => {
   return (
     <div className="bg-green-50 min-h-screen text-gray-800">
       <div id="pdf-content" dir="rtl" className="a4-sheet" style={{ position: 'absolute', left: '-9999px', width: '210mm', minHeight:'297mm', boxSizing:'border-box', overflow:'hidden' }}>
-         <div className="p-8 bg-white" style={{fontFamily: "'Tajawal', sans-serif", direction: 'rtl'}}>
+         {/* The style below is for the PDF generation. 
+             letterSpacing: 'normal' is crucial to fix a bug on iPhones (WebKit) 
+             where Arabic characters appear disconnected in the generated PDF. 
+         */}
+         <div className="p-8 bg-white" style={{fontFamily: "'Tajawal', sans-serif", direction: 'rtl', letterSpacing: 'normal'}}>
             <header className="flex justify-between items-center border-b-2 pb-4 border-gray-200">
                 <div>
                     <h1 className="text-2xl font-bold text-green-800">طلب تغطية إعلامية</h1>
