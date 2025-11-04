@@ -175,7 +175,7 @@ const App: React.FC = () => {
                     </ul>
                 </div>
                 <div className="border-t pt-6 mt-6">
-                    <h3 className="text-lg font-bold text-green-700 mb-2">ملاحظات إضافية</h3>
+                    <h3 className="text-lg font-bold text-green-700 mb-2">معلومات و اضافات اضافية</h3>
                     <p className="whitespace-pre-wrap bg-gray-50 p-3 rounded-md min-h-[50px]">{formData.additionalNotes || 'لا يوجد'}</p>
                 </div>
             </main>
@@ -208,7 +208,7 @@ const App: React.FC = () => {
               </div>
               <div>
                 <label htmlFor="applicantName" className="block text-sm font-medium text-gray-700 mb-1">👤 مقدم الطلب</label>
-                <input type="text" id="applicantName" name="applicantName" value={formData.applicantName} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500" placeholder="الاسم الكامل"/>
+                <input type="text" id="applicantName" name="applicantName" value={formData.applicantName} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500" placeholder="الاسم الكامل" dir="auto"/>
                 {errors.applicantName && <p className="text-red-500 text-xs mt-1">{errors.applicantName}</p>}
               </div>
               <div>
@@ -218,7 +218,7 @@ const App: React.FC = () => {
               </div>
               <div>
                 <label htmlFor="eventName" className="block text-sm font-medium text-gray-700 mb-1">🎉 اسم الفعالية</label>
-                <input type="text" id="eventName" name="eventName" value={formData.eventName} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500" placeholder="مثال: فعالية يوم التطوع"/>
+                <input type="text" id="eventName" name="eventName" value={formData.eventName} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500" placeholder="مثال: فعالية يوم التطوع" dir="auto"/>
                 {errors.eventName && <p className="text-red-500 text-xs mt-1">{errors.eventName}</p>}
               </div>
               <div>
@@ -228,7 +228,7 @@ const App: React.FC = () => {
               </div>
                <div>
                 <label htmlFor="eventLocation" className="block text-sm font-medium text-gray-700 mb-1">📍 مكان الفعالية</label>
-                <input type="text" id="eventLocation" name="eventLocation" value={formData.eventLocation} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500" placeholder="مثال: قاعة الجمعية"/>
+                <input type="text" id="eventLocation" name="eventLocation" value={formData.eventLocation} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500" placeholder="مثال: قاعة الجمعية" dir="auto"/>
                 {errors.eventLocation && <p className="text-red-500 text-xs mt-1">{errors.eventLocation}</p>}
               </div>
               <div>
@@ -257,8 +257,8 @@ const App: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="additionalNotes" className="block text-sm font-medium text-gray-700 mb-1">💬 ملاحظات إضافية</label>
-              <textarea id="additionalNotes" name="additionalNotes" rows={4} value={formData.additionalNotes} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500" placeholder="أي تفاصيل أخرى تود إضافتها لفريق الإعلام..."></textarea>
+              <label htmlFor="additionalNotes" className="block text-sm font-medium text-gray-700 mb-1">💬 معلومات و اضافات اضافية</label>
+              <textarea id="additionalNotes" name="additionalNotes" rows={4} value={formData.additionalNotes} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500" placeholder="أي تفاصيل أخرى تود إضافتها لفريق الإعلام..." dir="auto"></textarea>
             </div>
 
             <div className="border-t pt-6 mt-8 flex items-center justify-center">
@@ -269,7 +269,7 @@ const App: React.FC = () => {
                 >
                   {isLoading ? (
                     <>
-                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
